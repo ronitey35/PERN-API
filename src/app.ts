@@ -18,7 +18,7 @@ if (env.NODE_ENV === 'development') {
 
 app.get(
   '/',
-  handleAsync((req, res) => {
+  handleAsync(async (req, res) => {
     return res.json({
       message: 'Api is running fine...',
       env: env.NODE_ENV,
