@@ -1,22 +1,46 @@
-import { BadRequestException } from '@/lib/exceptions';
 import { handleAsync } from '@/middlewares/handle-async';
+import {
+  loginUserSchema,
+  logoutUserSchems,
+  registerUserSchema
+} from '@/dtos/user.dto';
+import { db } from '@/config/database';
+import { users } from '@/schema/user.schema';
+import { and, eq } from 'drizzle-orm';
+import { BadRequestException } from '@/lib/exceptions';
 
-type CreateUserBody = {
-  name: string;
-  email: string;
-  password: string;
-  avatar: string;
-};
-export const createUser = handleAsync<unknown, unknown, CreateUserBody>(
-  async (req, res, next) => {
-    const { name, email, password, avatar } = req.body;
-    if (!name || !email || !password || !avatar) {
-      return next(new BadRequestException('Please fill all the fields'));
-    }
-    return res.json({ message: 'user created successfully' });
+export const registerUser = handleAsync(async (req, res) => {
+  const data = registerUserSchema.parse(req.body);
+  const [userExists] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, data.email));
+
+  if (userExists) {
+    throw new BadRequestException('User with same email already exists!');
   }
-);
 
-export const getAllUsers = handleAsync(async (req, res) => {
-  return res.json({ users: ['elon', 'obama'] });
+  const [createdUser] = await db
+    .insert(users)
+    .values(data)
+    .returning({ id: users.id });
+  return res.json({ user: createdUser });
+});
+
+export const loginUser = handleAsync(async (req, res) => {
+  const data = loginUserSchema.parse(req.body);
+  const [loggedUser] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.email, data.email), eq(users.password, data.password)))
+
+});
+
+export const deleteUser = handleAsync(async (req, res) => {
+  const data = logoutUserSchems.parse(req.body);
+  const [logOutUser] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, data.id));
+  return res.json({ message: 'Logged out successfully' });
 });
